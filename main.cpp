@@ -2,40 +2,39 @@
 #include "Renderer.h"
 
 int main(int argc, char** argv){
-    Particle electron(1, -1, 1, Pixel(0, 0, 255, 0));
-    Particle positron(1, -1, 1, Pixel(255, 255, 0, 0));
+    srand(time(NULL));
 
-    const size_t numObjects = 10;
+    Particle electron(1, -1, 1, Pixel(0, 0, 255, 0));
+    Particle positron(1, 1, 1, Pixel(255, 255, 0, 0));
+
+    const size_t numObjects = std::atoi(argv[1]);
+    const double timeStep = std::atof(argv[2]);
     const Vector3 bounds(100, 100, 100);
 
-    Particle* particles[numObjects] = {&electron, &electron, &electron, &electron, &electron, &positron, &positron, &positron, &positron, &positron};
-    Vector3 pos[numObjects] = {
-        Vector3(10, 25, 0),
-        Vector3(30, 25, 0),
-        Vector3(50, 25, 0),
-        Vector3(70, 25, 0),
-        Vector3(90, 25, 0),
-        Vector3(15, 75, 0),
-        Vector3(35, 75, 0),
-        Vector3(55, 75, 0),
-        Vector3(75, 75, 0),
-        Vector3(95, 75, 0)
-    };
+    Particle* particles[numObjects];
 
-    Vector3 vel[numObjects]{
-        Vector3(1, 0, 0),
-        Vector3(0, 1, 0),
-        Vector3(-1, 0, 0),
-        Vector3(0, -1, 0),
-        Vector3(1, 1, 0),
-        Vector3(1, -1, 0),
-        Vector3(-1, 1, 0),
-        Vector3(-1, -1, 0),
-        Vector3(1, 2, 0),
-        Vector3(2, 1, 0)
-    };
+    for(size_t i = 0; i < numObjects / 2; ++ i){
+        particles[i] = &electron;
+    }
 
-    Physics physics(particles, pos, vel, bounds, numObjects, 0.1);
+    for(size_t i = numObjects / 2; i < numObjects; ++ i){
+        particles[i] = &positron;
+    }
+
+    Vector3 pos[numObjects];
+    Vector3 vel[numObjects];
+
+    for(size_t i = 0; i < numObjects; ++ i){
+        pos[i] = Vector3(
+            (double)rand() / RAND_MAX * (bounds.x_ - 2 * particles[i]->radius_) + particles[i]->radius_,
+            (double)rand() / RAND_MAX * (bounds.y_ - 2 * particles[i]->radius_) + particles[i]->radius_,
+            0
+        );
+
+        vel[i] = Vector3((double)rand() / RAND_MAX * 6 - 3, (double)rand() / RAND_MAX * 6 - 3, 0);
+    }
+
+    Physics physics(particles, pos, vel, bounds, numObjects, timeStep);
 
     Renderer renderer("Charge Box", 600, 600);
 

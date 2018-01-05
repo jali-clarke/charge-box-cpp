@@ -26,8 +26,28 @@ Physics::~Physics(){
     delete accel_;
 }
 
+#define G 0.0
+#define K 200.0
+
 void Physics::accumulateAccel(){
-    // no force yet
+    for(size_t i = 0; i < numObjects_; ++ i){
+        accel_[i] = Vector3(0, G, 0);
+    }
+
+    for(size_t i = 0; i < numObjects_; ++ i){
+        for(size_t j = 0; j < i; ++ j){
+            Vector3 force = pos_[i] - pos_[j];
+            double forceMag = force.mag();
+
+            if(forceMag < 1){
+                forceMag = 1;
+            }
+
+            force = (K * particles_[i]->charge_ * particles_[j]->charge_ / (forceMag * forceMag * forceMag)) * force;
+            accel_[i] = accel_[i] + (1.0 / particles_[i]->mass_) * force;
+            accel_[j] = accel_[j] - (1.0 / particles_[j]->mass_) * force;
+        }
+    }
 }
 
 void Physics::advanceTimeStep(){
@@ -45,21 +65,27 @@ void Physics::satisfyConstraints(){
     // elements should be in the box, bouncing off the wall
     for(size_t i = 0; i < numObjects_; ++ i){
         if(pos_[i].x_ - particles_[i]->radius_ < 0){
-            pos_[i].x_ += 2 * (particles_[i]->radius_ - pos_[i].x_);
+            oldPos_[i].x_ = pos_[i].x_ - oldPos_[i].x_ + particles_[i]->radius_;
+            pos_[i].x_ = particles_[i]->radius_;
         } else if(pos_[i].x_ + particles_[i]->radius_ > bounds_.x_){
-            pos_[i].x_ -= 2 * (pos_[i].x_ + particles_[i]->radius_ - bounds_.x_);
+            oldPos_[i].x_ = pos_[i].x_ - oldPos_[i].x_ + bounds_.x_ - particles_[i]->radius_;
+            pos_[i].x_ = bounds_.x_ - particles_[i]->radius_;
         }
 
         if(pos_[i].y_ - particles_[i]->radius_ < 0){
-            pos_[i].y_ += 2 * (particles_[i]->radius_ - pos_[i].y_);
+            oldPos_[i].y_ = pos_[i].y_ - oldPos_[i].y_ + particles_[i]->radius_;
+            pos_[i].y_ = particles_[i]->radius_;
         } else if(pos_[i].y_ + particles_[i]->radius_ > bounds_.y_){
-            pos_[i].y_ -= 2 * (pos_[i].y_ + particles_[i]->radius_ - bounds_.y_);
+            oldPos_[i].y_ = pos_[i].y_ - oldPos_[i].y_ + bounds_.y_ - particles_[i]->radius_;
+            pos_[i].y_ = bounds_.y_ - particles_[i]->radius_;
         }
 
         if(pos_[i].z_ - particles_[i]->radius_ < 0){
-            pos_[i].z_ += 2 * (particles_[i]->radius_ - pos_[i].z_);
+            oldPos_[i].z_ = pos_[i].z_ - oldPos_[i].z_ + particles_[i]->radius_;
+            pos_[i].z_ = particles_[i]->radius_;
         } else if(pos_[i].z_ + particles_[i]->radius_ > bounds_.z_){
-            pos_[i].z_ -= 2 * (pos_[i].z_ + particles_[i]->radius_ - bounds_.z_);
+            oldPos_[i].z_ = pos_[i].z_ - oldPos_[i].z_ + bounds_.z_ - particles_[i]->radius_;
+            pos_[i].z_ = bounds_.z_ - particles_[i]->radius_;
         }
     }
 
@@ -69,11 +95,8 @@ void Physics::satisfyConstraints(){
             double deltaMag = delta.mag();
             double minLength = particles_[i]->radius_ + particles_[j]->radius_;
 
-            if(delta.mag() < minLength){
-                delta = (minLength / delta.mag()) * delta;
-                //double totalMass = particles_[i]->mass_ + particles_[j]->mass_;
-                //pos_[i] = pos_[i] + (particles_[i]->mass_ / totalMass) * delta;
-                //pos_[j] = pos_[j] - (particles_[j]->mass_ / totalMass) * delta;
+            if(deltaMag < minLength){
+
             }
         }
     }
