@@ -27,7 +27,7 @@ Physics::~Physics(){
 }
 
 #define G 0.0
-#define K 400.0
+#define K 2000.0
 
 void Physics::accumulateAccel(){
     for(size_t i = 0; i < numObjects_; ++ i){
@@ -38,10 +38,6 @@ void Physics::accumulateAccel(){
         for(size_t j = 0; j < i; ++ j){
             Vector3 force = pos_[i] - pos_[j];
             double forceMag = force.mag();
-
-            if(forceMag < 1.0){
-                forceMag = 1.0;
-            }
 
             force = (K * particles_[i]->charge_ * particles_[j]->charge_ / (forceMag * forceMag * forceMag)) * force;
             accel_[i] = accel_[i] + (1.0 / particles_[i]->mass_) * force;
@@ -89,7 +85,6 @@ void Physics::satisfyConstraints(){
         }
     }
 
-    /*
     for(size_t i = 0; i < numObjects_; ++ i){
         for(size_t j = 0; j < i; ++ j){
             Vector3 delta = pos_[i] - pos_[j];
@@ -97,13 +92,23 @@ void Physics::satisfyConstraints(){
             double minLength = particles_[i]->radius_ + particles_[j]->radius_;
 
             if(deltaMag < minLength){
+                double totalMass = particles_[i]->mass_ + particles_[j]->mass_;
+
                 delta = (minLength / deltaMag) * delta;
-                pos_[i] = 0.5 * delta + pos_[i];
-                pos_[j] = -0.5 * delta + pos_[j];
+
+                Vector3 vel_i = pos_[i] - oldPos_[i];
+                Vector3 vel_j = pos_[j] - oldPos_[j];
+
+                pos_[i] = (particles_[j]->mass_ / totalMass) * delta + pos_[i];
+                pos_[j] = (-particles_[i]->mass_ / totalMass) * delta + pos_[j];
+
+                Vector3 adjustment = (2 * ((vel_j - vel_i) * delta) / (totalMass * minLength * minLength)) * delta;
+
+                oldPos_[i] = pos_[i] - particles_[j]->mass_ * adjustment - vel_i;
+                oldPos_[j] = pos_[j] + particles_[i]->mass_ * adjustment - vel_j;
             }
         }
     }
-    */
 }
 
 Uint8 diffuse(const double maxVal, const double maxDistSq, const double distSq){
@@ -122,14 +127,15 @@ void Physics::renderInto(Renderer& renderer) const{
     }
 
     for(size_t n = 0; n < numObjects_; ++ n){
-        const double yMin = pos_[n].y_ - particles_[n]->radius_;
-        const double yMax = pos_[n].y_ + particles_[n]->radius_;
-        const double maxRadSq = particles_[n]->radius_ * particles_[n]->radius_ * (1.0 - 0.3 * (double)rand() / RAND_MAX);
+        const double maxRad = particles_[n]->radius_ * (1.0 - 0.25 * (double)rand() / RAND_MAX);
+        const double maxRadSq = maxRad * maxRad;
+
+        const double yMin = (pos_[n].y_ < maxRad) ? 0 : pos_[n].y_ - maxRad;
+        const double yMax = (pos_[n].y_ + maxRad > bounds_.y_) ? bounds_.y_ : pos_[n].y_ + maxRad;
+        const double xMin = (pos_[n].x_ < maxRad) ? 0 : pos_[n].x_ - maxRad;
+        const double xMax = (pos_[n].x_ + maxRad > bounds_.x_) ? bounds_.x_ : pos_[n].x_ + maxRad;
 
         for(size_t i = (size_t)(yMin * scaleY); i <= (size_t)(yMax * scaleY); ++ i){
-            const double xMin = pos_[n].x_ - particles_[n]->radius_;
-            const double xMax = pos_[n].x_ + particles_[n]->radius_;
-
             for(size_t j = (size_t)(xMin * scaleX); j <= (size_t)(xMax * scaleX); ++ j){
                 const double jCirc = j / scaleX - pos_[n].x_;
                 const double iCirc = i / scaleY - pos_[n].y_;
@@ -140,7 +146,8 @@ void Physics::renderInto(Renderer& renderer) const{
                     Uint8* hack = (Uint8*)&toRender;
 
                     for(size_t i = 0; i < 4; ++ i){
-                        hack[i] = diffuse((double)hack[i], maxRadSq, radSq);
+                        const double scale = radSq / maxRadSq - 1.0;
+                        hack[i] = (Uint8)((double)hack[i] * scale * scale);
                     }
 
                     renderer.getBuffer()[i * renderer.getWidth() + j] = toRender;

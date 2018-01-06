@@ -9,10 +9,12 @@ struct Vector3{
     Vector3();
     Vector3(const double x, const double y, const double z);
     double mag() const;
+    double magSq() const;
 };
 
 Vector3 operator+(const Vector3& vec0, const Vector3& vec1);
 Vector3 operator-(const Vector3& vec0, const Vector3& vec1);
 Vector3 operator*(const double scale, const Vector3& vec0);
+double operator*(const Vector3& vec0, const Vector3& vec1);
 
 #endif
