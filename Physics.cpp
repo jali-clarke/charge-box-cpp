@@ -27,7 +27,7 @@ Physics::~Physics(){
 }
 
 #define G 0.0
-#define K 200.0
+#define K 400.0
 
 void Physics::accumulateAccel(){
     for(size_t i = 0; i < numObjects_; ++ i){
@@ -39,8 +39,8 @@ void Physics::accumulateAccel(){
             Vector3 force = pos_[i] - pos_[j];
             double forceMag = force.mag();
 
-            if(forceMag < 1){
-                forceMag = 1;
+            if(forceMag < 1.0){
+                forceMag = 1.0;
             }
 
             force = (K * particles_[i]->charge_ * particles_[j]->charge_ / (forceMag * forceMag * forceMag)) * force;
@@ -89,6 +89,7 @@ void Physics::satisfyConstraints(){
         }
     }
 
+    /*
     for(size_t i = 0; i < numObjects_; ++ i){
         for(size_t j = 0; j < i; ++ j){
             Vector3 delta = pos_[i] - pos_[j];
@@ -96,10 +97,18 @@ void Physics::satisfyConstraints(){
             double minLength = particles_[i]->radius_ + particles_[j]->radius_;
 
             if(deltaMag < minLength){
-
+                delta = (minLength / deltaMag) * delta;
+                pos_[i] = 0.5 * delta + pos_[i];
+                pos_[j] = -0.5 * delta + pos_[j];
             }
         }
     }
+    */
+}
+
+Uint8 diffuse(const double maxVal, const double maxDistSq, const double distSq){
+    const double scale = distSq / maxDistSq - 1.0;
+    return (Uint8)(maxVal * scale * scale);
 }
 
 void Physics::renderInto(Renderer& renderer) const{
@@ -115,6 +124,7 @@ void Physics::renderInto(Renderer& renderer) const{
     for(size_t n = 0; n < numObjects_; ++ n){
         const double yMin = pos_[n].y_ - particles_[n]->radius_;
         const double yMax = pos_[n].y_ + particles_[n]->radius_;
+        const double maxRadSq = particles_[n]->radius_ * particles_[n]->radius_ * (1.0 - 0.3 * (double)rand() / RAND_MAX);
 
         for(size_t i = (size_t)(yMin * scaleY); i <= (size_t)(yMax * scaleY); ++ i){
             const double xMin = pos_[n].x_ - particles_[n]->radius_;
@@ -123,8 +133,17 @@ void Physics::renderInto(Renderer& renderer) const{
             for(size_t j = (size_t)(xMin * scaleX); j <= (size_t)(xMax * scaleX); ++ j){
                 const double jCirc = j / scaleX - pos_[n].x_;
                 const double iCirc = i / scaleY - pos_[n].y_;
-                if(jCirc * jCirc + iCirc * iCirc <= particles_[n]->radius_ * particles_[n]->radius_){
-                    renderer.getBuffer()[i * renderer.getWidth() + j] = particles_[n]->colour_;
+                const double radSq = jCirc * jCirc + iCirc * iCirc;
+
+                if(radSq < maxRadSq){
+                    Uint32 toRender = particles_[n]->colour_;
+                    Uint8* hack = (Uint8*)&toRender;
+
+                    for(size_t i = 0; i < 4; ++ i){
+                        hack[i] = diffuse((double)hack[i], maxRadSq, radSq);
+                    }
+
+                    renderer.getBuffer()[i * renderer.getWidth() + j] = toRender;
                 }
             }
         }

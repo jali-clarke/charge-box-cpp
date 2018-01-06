@@ -4,8 +4,8 @@
 int main(int argc, char** argv){
     srand(time(NULL));
 
-    Particle electron(1, -1, 1, Pixel(0, 0, 255, 0));
-    Particle positron(1, 1, 1, Pixel(255, 255, 0, 0));
+    Particle electron(1, -1, 2, Pixel(0, 0, 255, 0));
+    Particle positron(1, 1, 2, Pixel(255, 255, 0, 0));
 
     const size_t numObjects = std::atoi(argv[1]);
     const double timeStep = std::atof(argv[2]);
