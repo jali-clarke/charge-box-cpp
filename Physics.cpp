@@ -26,7 +26,7 @@ Physics::~Physics(){
     delete accel_;
 }
 
-#define G 0.0
+#define G 10.0
 #define K 2000.0
 
 void Physics::accumulateAccel(){
@@ -89,9 +89,9 @@ void Physics::satisfyConstraints(){
         for(size_t j = 0; j < i; ++ j){
             Vector3 delta = pos_[i] - pos_[j];
             double deltaMag = delta.mag();
-            double minLength = particles_[i]->radius_ + particles_[j]->radius_;
+            double minLength = particles_[i]->radius_ + particles_[j]->radius_ - deltaMag;
 
-            if(deltaMag < minLength){
+            if(minLength > 0){
                 double totalMass = particles_[i]->mass_ + particles_[j]->mass_;
 
                 delta = (minLength / deltaMag) * delta;
@@ -127,7 +127,7 @@ void Physics::renderInto(Renderer& renderer) const{
     }
 
     for(size_t n = 0; n < numObjects_; ++ n){
-        const double maxRad = particles_[n]->radius_ * (1.0 - 0.25 * (double)rand() / RAND_MAX);
+        const double maxRad = particles_[n]->radius_ * (1.0 - 0.1 * (double)rand() / RAND_MAX);
         const double maxRadSq = maxRad * maxRad;
 
         const double yMin = (pos_[n].y_ < maxRad) ? 0 : pos_[n].y_ - maxRad;
